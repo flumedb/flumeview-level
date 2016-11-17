@@ -8,6 +8,7 @@
     "url": "git://github.com/dominictarr/flumeview-level.git"
   },
   "dependencies": {
+    "ltgt": "^2.1.3",
     "pull-paramap": "^1.2.1"
   },
   "devDependencies": {},
