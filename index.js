@@ -6,6 +6,7 @@ var pl = require('pull-level')
 var Obv = require('obv')
 var path = require('path')
 var Paramap = require('pull-paramap')
+var ltgt = require('ltgt')
 
 module.exports = function (version, map) {
   return function (log, name) {
@@ -91,6 +92,10 @@ module.exports = function (version, map) {
         var values = opts.values
         opts.keys = true; opts.values = true
         //TODO: preserve whatever the user passed in on opts...
+
+        var lower = ltgt.lowerBound(opts)
+        if(lower == null) opts.gt = null
+
         return pull(
           pl.read(db, opts),
           Paramap(function (data, cb) {
@@ -108,5 +113,9 @@ module.exports = function (version, map) {
     }
   }
 }
+
+
+
+
 
 
