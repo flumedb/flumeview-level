@@ -40,7 +40,6 @@ module.exports = function (version, map) {
     }
 
     db.get(META, {keyEncoding: 'utf8'}, function (err, value) {
-//      since.set(value && value.since || 0)
       if(err) since.set(-1)
       else if(value.version === version)
         since.set(value.since)
@@ -98,6 +97,10 @@ module.exports = function (version, map) {
 
         return pull(
           pl.read(db, opts),
+          pull.filter(function (op) {
+            //this is an ugly hack! ); but it stops the index metadata appearing in the live stream
+            return op.key !== '\u0000'
+          }),
           Paramap(function (data, cb) {
             if(data.sync) return cb(null, data)
             log.get(data.value, function (err, value) {
@@ -113,9 +116,5 @@ module.exports = function (version, map) {
     }
   }
 }
-
-
-
-
 
 
