@@ -33,7 +33,7 @@ module.exports = function (version, map) {
 
     function destroy (cb) {
       close(function () {
-        level.destroy(db, function () {
+        Level.destroy(db, function () {
           db = create(); cb()
         })
       })
@@ -116,5 +116,7 @@ module.exports = function (version, map) {
     }
   }
 }
+
+
 
 
