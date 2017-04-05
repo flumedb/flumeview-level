@@ -85,6 +85,7 @@ module.exports = function (version, map) {
       get: function (key, cb) {
         //wait until the log has been processed up to the current point.
         db.get(key, function (err, seq) {
+          if(err) return cb(err)
           log.get(seq, cb)
         })
       },
