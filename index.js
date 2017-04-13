@@ -7,6 +7,7 @@ var Obv = require('obv')
 var path = require('path')
 var Paramap = require('pull-paramap')
 var ltgt = require('ltgt')
+var explain = require('explain-error')
 
 module.exports = function (version, map) {
   return function (log, name) {
@@ -107,7 +108,7 @@ module.exports = function (version, map) {
           Paramap(function (data, cb) {
             if(data.sync) return cb(null, data)
             log.get(data.value, function (err, value) {
-              if(err) cb(err)
+              if(err) cb(explain(err, 'when trying to retrive:'+data.key+'at since:'+log.since.value))
               else cb(null, {key: data.key, seq: data.value, value: value})
             })
           })
@@ -119,6 +120,7 @@ module.exports = function (version, map) {
     }
   }
 }
+
 
 
 
