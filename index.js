@@ -86,8 +86,11 @@ module.exports = function (version, map) {
       get: function (key, cb) {
         //wait until the log has been processed up to the current point.
         db.get(key, function (err, seq) {
-          if(err) return cb(err)
-          log.get(seq, cb)
+          if(err) return cb(explain(err, 'flumeview-level.get: key not found:'+key )
+          log.get(seq, function (err, value) {
+            if(err) cb(explain(err, 'flumeview-level.get: index for:'+key+'pointed at:'+seq+'but log error'))
+            cb(null, value)
+          })
         })
       },
       read: function (opts) {
