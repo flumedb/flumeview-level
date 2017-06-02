@@ -86,6 +86,7 @@ module.exports = function (version, map) {
       get: function (key, cb) {
         //wait until the log has been processed up to the current point.
         db.get(key, function (err, seq) {
+          if(err && err.name === 'NotFoundError') return cb(err)
           if(err) cb(explain(err, 'flumeview-level.get: key not found:'+key))
           else
             log.get(seq, function (err, value) {
