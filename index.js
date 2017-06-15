@@ -34,9 +34,8 @@ module.exports = function (version, map) {
 
     function destroy (cb) {
       close(function () {
-        Level.destroy(db, function () {
-          db = create(); cb()
-        })
+        var dbPath = path.join(path.dirname(log.filename), name)
+        Level.destroy(dbPath, cb)
       })
     }
 
@@ -125,4 +124,3 @@ module.exports = function (version, map) {
     }
   }
 }
-
