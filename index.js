@@ -1,3 +1,4 @@
+'use strict'
 var pull = require('pull-stream')
 var Level = require('level')
 var bytewise = require('bytewise')
@@ -11,7 +12,9 @@ var explain = require('explain-error')
 
 module.exports = function (version, map) {
   return function (log, name) {
-    var db = create(path), writer
+    var dir = path.dirname(log.filename)
+    var dbPath = path.join(dir, name)
+    var db = create(), writer
 
     var META = '\x00', since = Obv()
 
@@ -21,7 +24,6 @@ module.exports = function (version, map) {
       closed = false
       if(!log.filename)
         throw new Error('flumeview-level can only be used with a log that provides a directory')
-      var dir = path.dirname(log.filename)
       return Level(path.join(dir, name), {keyEncoding: bytewise, valueEncoding: 'json'})
     }
 
@@ -34,7 +36,6 @@ module.exports = function (version, map) {
 
     function destroy (cb) {
       close(function () {
-        var dbPath = path.join(path.dirname(log.filename), name)
         Level.destroy(dbPath, cb)
       })
     }
@@ -45,7 +46,7 @@ module.exports = function (version, map) {
         since.set(value.since)
       else //version has changed, wipe db and start over.
         destroy(function () {
-          db = create(path); since.set(-1)
+          db = create(); since.set(-1)
         })
     })
 
@@ -124,3 +125,5 @@ module.exports = function (version, map) {
     }
   }
 }
+
+
