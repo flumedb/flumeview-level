@@ -9,12 +9,13 @@ var path = require('path')
 var Paramap = require('pull-paramap')
 var ltgt = require('ltgt')
 var explain = require('explain-error')
+var mkdirp = require('mkdirp')
 
 module.exports = function (version, map) {
   return function (log, name) {
     var dir = path.dirname(log.filename)
     var dbPath = path.join(dir, name)
-    var db = create(), writer
+    var db, writer
 
     var META = '\x00', since = Obv()
 
@@ -27,10 +28,13 @@ module.exports = function (version, map) {
       return Level(path.join(dir, name), {keyEncoding: bytewise, valueEncoding: 'json'})
     }
 
+    var since = Obv()
+
     function close (cb) {
       closed = true
       //todo: move this bit into pull-write
       if(writer) writer.abort(function () { db.close(cb) })
+      else if(!db) cb()
       else db.close(cb)
     }
 
@@ -40,17 +44,19 @@ module.exports = function (version, map) {
       })
     }
 
-    db.get(META, {keyEncoding: 'utf8'}, function (err, value) {
-      if(err) since.set(-1)
-      else if(value.version === version)
-        since.set(value.since)
-      else //version has changed, wipe db and start over.
-        destroy(function () {
-          db = create(); since.set(-1)
-        })
+    mkdirp(path.join(dir, name), function () {
+      if(closed) return
+      db = create()
+      db.get(META, {keyEncoding: 'utf8'}, function (err, value) {
+        if(err) since.set(-1)
+        else if(value.version === version)
+          since.set(value.since)
+        else //version has changed, wipe db and start over.
+          destroy(function () {
+            db = create(); since.set(-1)
+          })
+      })
     })
-
-    var since = Obv()
 
     return {
       since: since,
@@ -125,5 +131,12 @@ module.exports = function (version, map) {
     }
   }
 }
+
+
+
+
+
+
+
 
 
