@@ -23,10 +23,10 @@
     "flumecodec": "0.0.0",
     "flumedb": "^0.1.0",
     "flumelog-offset": "0.0.5",
-    "test-flumeview-index": "0.0.1"
+    "test-flumeview-index": "^2.0.0"
   },
   "scripts": {
-    "test": "node test.js"
+    "test": "node test/index.js && node test/bench.js"
   },
   "author": "'Dominic Tarr' <dominic.tarr@gmail.com> (dominictarr.com)",
   "license": "MIT"
