@@ -35,7 +35,9 @@ module.exports = function (version, map) {
       //todo: move this bit into pull-write
       if(writer) writer.abort(function () { db.close(cb) })
       else if(!db) cb()
-      else db.close(cb)
+      else since.once(function () {
+        db.close(cb)
+      })
     }
 
     function destroy (cb) {
@@ -53,7 +55,8 @@ module.exports = function (version, map) {
           since.set(value.since)
         else //version has changed, wipe db and start over.
           destroy(function () {
-            db = create(); since.set(-1)
+            db = create()
+            since.set(-1)
           })
       })
     })
@@ -131,12 +134,4 @@ module.exports = function (version, map) {
     }
   }
 }
-
-
-
-
-
-
-
-
 
