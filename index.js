@@ -105,13 +105,24 @@ module.exports = function (version, map) {
         })
       },
       read: function (opts) {
-        var keys = opts.keys
-        var values = opts.values
+        var keys = opts.keys !== false
+        var values = opts.values !== false
+        var seqs = opts.seqs !== false
         opts.keys = true; opts.values = true
         //TODO: preserve whatever the user passed in on opts...
 
         var lower = ltgt.lowerBound(opts)
         if(lower == null) opts.gt = null
+
+        function format (key, seq, value) {
+          return (
+            keys && values && seqs ? {key: key, seq: seq, value: value}
+          : keys && values         ? {key: key, value: value}
+          : keys && seqs           ? {key: key, seq: seq}
+          : seqs && values         ? {seq: seq, value: value}
+          : keys ? key : seqs ? seq : value
+          )
+        }
 
         return pull(
           pl.read(db, opts),
@@ -119,13 +130,17 @@ module.exports = function (version, map) {
             //this is an ugly hack! ); but it stops the index metadata appearing in the live stream
             return op.key !== '\u0000'
           }),
-          Paramap(function (data, cb) {
-            if(data.sync) return cb(null, data)
-            log.get(data.value, function (err, value) {
-              if(err) cb(explain(err, 'when trying to retrive:'+data.key+'at since:'+log.since.value))
-              else cb(null, {key: data.key, seq: data.value, value: value})
+          values
+          ? Paramap(function (data, cb) {
+              if(data.sync) return cb(null, data)
+              log.get(data.value, function (err, value) {
+                if(err) cb(explain(err, 'when trying to retrive:'+data.key+'at since:'+log.since.value))
+                else cb(null, format(data.key, data.value, value))
+              })
             })
-          })
+          : pull.map(function (data) {
+              return format(data.key, data.value, null)
+            })
         )
       },
       close: close,
@@ -134,4 +149,5 @@ module.exports = function (version, map) {
     }
   }
 }
+
 
