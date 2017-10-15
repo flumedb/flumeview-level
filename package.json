@@ -23,7 +23,7 @@
     "flumecodec": "0.0.0",
     "flumedb": "^0.1.0",
     "flumelog-offset": "0.0.5",
-    "test-flumeview-index": "^2.0.0"
+    "test-flumeview-index": "^2.1.0"
   },
   "scripts": {
     "test": "node test/index.js && node test/bench.js"
