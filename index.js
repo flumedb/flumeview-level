@@ -19,7 +19,7 @@ module.exports = function (version, map) {
 
     var META = '\x00', since = Obv()
 
-    var written = 0, closed
+    var written = 0, closed, outdated
 
     function create() {
       closed = false
@@ -33,7 +33,8 @@ module.exports = function (version, map) {
     function close (cb) {
       closed = true
       //todo: move this bit into pull-write
-      if(writer) writer.abort(function () { db.close(cb) })
+      if (outdated) db.close(cb)
+      else if(writer) writer.abort(function () { db.close(cb) })
       else if(!db) cb()
       else since.once(function () {
         db.close(cb)
@@ -53,11 +54,14 @@ module.exports = function (version, map) {
         if(err) since.set(-1)
         else if(value.version === version)
           since.set(value.since)
-        else //version has changed, wipe db and start over.
+        else {
+          //version has changed, wipe db and start over.
+          outdated = true
           destroy(function () {
             db = create()
             since.set(-1)
           })
+        }
       })
     })
 
@@ -149,5 +153,3 @@ module.exports = function (version, map) {
     }
   }
 }
-
-
