@@ -1,3 +1,4 @@
+'use strict'
 var pull = require('pull-stream')
 var Level = require('level')
 var bytewise = require('bytewise')
@@ -8,10 +9,13 @@ var path = require('path')
 var Paramap = require('pull-paramap')
 var ltgt = require('ltgt')
 var explain = require('explain-error')
+var mkdirp = require('mkdirp')
 
 module.exports = function (version, map) {
   return function (log, name) {
-    var db = create(path), writer
+    var dir = path.dirname(log.filename)
+    var dbPath = path.join(dir, name)
+    var db, writer
 
     var META = '\x00', since = Obv()
 
@@ -21,35 +25,41 @@ module.exports = function (version, map) {
       closed = false
       if(!log.filename)
         throw new Error('flumeview-level can only be used with a log that provides a directory')
-      var dir = path.dirname(log.filename)
       return Level(path.join(dir, name), {keyEncoding: bytewise, valueEncoding: 'json'})
     }
+
+    var since = Obv()
 
     function close (cb) {
       closed = true
       //todo: move this bit into pull-write
       if(writer) writer.abort(function () { db.close(cb) })
-      else db.close(cb)
+      else if(!db) cb()
+      else since.once(function () {
+        db.close(cb)
+      })
     }
 
     function destroy (cb) {
       close(function () {
-        var dbPath = path.join(path.dirname(log.filename), name)
         Level.destroy(dbPath, cb)
       })
     }
 
-    db.get(META, {keyEncoding: 'utf8'}, function (err, value) {
-      if(err) since.set(-1)
-      else if(value.version === version)
-        since.set(value.since)
-      else //version has changed, wipe db and start over.
-        destroy(function () {
-          db = create(path); since.set(-1)
-        })
+    mkdirp(path.join(dir, name), function () {
+      if(closed) return
+      db = create()
+      db.get(META, {keyEncoding: 'utf8'}, function (err, value) {
+        if(err) since.set(-1)
+        else if(value.version === version)
+          since.set(value.since)
+        else //version has changed, wipe db and start over.
+          destroy(function () {
+            db = create()
+            since.set(-1)
+          })
+      })
     })
-
-    var since = Obv()
 
     return {
       since: since,
@@ -95,13 +105,24 @@ module.exports = function (version, map) {
         })
       },
       read: function (opts) {
-        var keys = opts.keys
-        var values = opts.values
+        var keys = opts.keys !== false
+        var values = opts.values !== false
+        var seqs = opts.seqs !== false
         opts.keys = true; opts.values = true
         //TODO: preserve whatever the user passed in on opts...
 
         var lower = ltgt.lowerBound(opts)
         if(lower == null) opts.gt = null
+
+        function format (key, seq, value) {
+          return (
+            keys && values && seqs ? {key: key, seq: seq, value: value}
+          : keys && values         ? {key: key, value: value}
+          : keys && seqs           ? {key: key, seq: seq}
+          : seqs && values         ? {seq: seq, value: value}
+          : keys ? key : seqs ? seq : value
+          )
+        }
 
         return pull(
           pl.read(db, opts),
@@ -109,13 +130,17 @@ module.exports = function (version, map) {
             //this is an ugly hack! ); but it stops the index metadata appearing in the live stream
             return op.key !== '\u0000'
           }),
-          Paramap(function (data, cb) {
-            if(data.sync) return cb(null, data)
-            log.get(data.value, function (err, value) {
-              if(err) cb(explain(err, 'when trying to retrive:'+data.key+'at since:'+log.since.value))
-              else cb(null, {key: data.key, seq: data.value, value: value})
+          values
+          ? Paramap(function (data, cb) {
+              if(data.sync) return cb(null, data)
+              log.get(data.value, function (err, value) {
+                if(err) cb(explain(err, 'when trying to retrive:'+data.key+'at since:'+log.since.value))
+                else cb(null, format(data.key, data.value, value))
+              })
             })
-          })
+          : pull.map(function (data) {
+              return format(data.key, data.value, null)
+            })
         )
       },
       close: close,
@@ -124,3 +149,5 @@ module.exports = function (version, map) {
     }
   }
 }
+
+
