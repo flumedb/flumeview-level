@@ -1,7 +1,7 @@
 'use strict'
 var pull = require('pull-stream')
 var Level = require('level')
-var bytewise = require('bytewise')
+var charwise = require('charwise')
 var Write = require('pull-write')
 var pl = require('pull-level')
 var Obv = require('obv')
@@ -25,10 +25,8 @@ module.exports = function (version, map) {
       closed = false
       if(!log.filename)
         throw new Error('flumeview-level can only be used with a log that provides a directory')
-      return Level(path.join(dir, name), {keyEncoding: bytewise, valueEncoding: 'json'})
+      return Level(path.join(dir, name), {keyEncoding: charwise, valueEncoding: 'json'})
     }
-
-    var since = Obv()
 
     function close (cb) {
       closed = true
