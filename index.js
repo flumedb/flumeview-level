@@ -130,7 +130,7 @@ module.exports = function (version, map) {
           pl.read(db, opts),
           pull.filter(function (op) {
             //this is an ugly hack! ); but it stops the index metadata appearing in the live stream
-            return op.key !== '\u0000'
+            return op.key !== META
           }),
           values
           ? Paramap(function (data, cb) {
