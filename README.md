@@ -8,9 +8,11 @@ Provides indexes which are persistent and can be streamed in order.
 ## example
 
 ``` js
-flumedb.use(name, function (value) {
+var ViewLevel = require('flumeview-level')
+
+flumedb.use(name, ViewLevel(1, function (value) {
   return [data.foo] // must return an array
-})
+}))
 
 flumedb.append({foo: 'bar'}, function (err) {
   if(err) throw err
