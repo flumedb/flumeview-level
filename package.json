@@ -20,9 +20,9 @@
     "pull-write": "^1.1.1"
   },
   "devDependencies": {
-    "flumecodec": "0.0.0",
-    "flumedb": "^0.1.0",
-    "flumelog-offset": "0.0.5",
+    "flumecodec": "0.0.1",
+    "flumedb": "^0.4.6",
+    "flumelog-offset": "^3.2.6",
     "test-flumeview-index": "^2.1.0"
   },
   "scripts": {
