@@ -1,7 +1,7 @@
 {
   "name": "flumeview-level",
   "description": "a flumeview on level",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "homepage": "https://github.com/dominictarr/flumeview-level",
   "repository": {
     "type": "git",
