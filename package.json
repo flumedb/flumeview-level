@@ -2,10 +2,10 @@
   "name": "flumeview-level",
   "description": "a flumeview on level",
   "version": "3.0.2",
-  "homepage": "https://github.com/dominictarr/flumeview-level",
+  "homepage": "https://github.com/flumedb/flumeview-level",
   "repository": {
     "type": "git",
-    "url": "git://github.com/dominictarr/flumeview-level.git"
+    "url": "git://github.com/flumedb/flumeview-level.git"
   },
   "dependencies": {
     "charwise": "^3.0.1",
