@@ -36,41 +36,83 @@ flumedb.append({foo: 'bar'}, function (err) {
 
 ### `FlumeviewLevel(version, map) => function`
 
-`version` - the version of the view. Incrementing this number will cause the view to be re-built
+#### `version`
+The version of the view. Incrementing this number will cause the view to be re-built
 
-`map` - a function with signature `(value, seq)`, where `value` is the item from the log coming past, and `seq` is the location of that value in the flume log. This function must return either: 
-  - an array of items, where each item is going to become the lookup key in the leveldb 
-    - the lookup key can be a string e.g. `address-mix` or e.g. and array `['name', '%feqasd23asd']` 
-  - empty `[]`, which signals this value will be excluded from the index 
+#### `map`
+A function with signature `(value, seq)`, where `value` is the item from the log coming past, and `seq` is the location of that value in the flume log.
+
+This function **must return an Array** that's either empty or contains unique index key(s).
+These index keys can then be queired to retrieve the stored value (see `get` and `read` below).
+
+Examples of index key(s) you might return:
+- `[]` - i.e. don't add any indexes for this `value`
+- `['@mix']` - make an index entry for this value under string `@mix`
+- `['@mix', '@mixmix']` - make an index entries for this value under both `@mix` AND `@mixmix`
+- `[['@mix', 1524805117433]]` - make an index entry for this value under the key `['@mix', 1524805117433]` (anything can be a key in leveldb)
+
+This last case is useful when you might want multiple entries under a particular key like `@mix` - if just use `@mix` then the index will get overwritten by future values coming in with the same key.
+Extending the key to include some unique aspect (like a timestamp or the `seq` of the value) means you can have multiple indexes in your view which have a _similar_ key.
+
+e.g. [flumeview-search](https://github.com/flumedb/flumeview-search) is a flumeview which takes the text from incoming values and builds an index which can be searched.
+It takes a sentence like "Learn about leveldb" and maps that into index keys like `[['learn', -145], ['about', -145], ['leveldb', -145]]`, meaning we can later search "leveldb" and find this sentence, as well as all other sentences also containing "leveldb".
 
 
-`function` - flumeview-level returns a function which follows the flumeview pattern, enabling it to be installed into a flumedb.
+#### `function`
+flumeview-level returns a function which follows the flumeview pattern, enabling it to be installed into a flumedb.
 
 
 ### `get(key, cb)`
 
 This is a method that gets attached to the flumedb after you install your flumeview (see example above).
 
+The keys for the values in `map` above would be `'@mix'`, `'@mixmix'`, or `['@mix', 1524805117433]`
+
 
 ### `read(opts) => pull-stream`
 
-`opts` is a level db query. Some example options you can include: 
+`opts` is similar to a level db query ([see level docs](https://github.com/Level/levelup#dbcreatereadstreamoptions)).
+
+e.g.
 
 ```js
 {
-  live: true,
+  live: true,     // this is an addition to the classic query options of level
+  gte: '@mi',     // gte = greater than or equal to
+  lt: null,       // lt = less than
   reverse: true,
   keys: true,
   values: true,
   seqs: false,
-  gte: 'name' // gte: greater than or equal to
 }
 ```
 
-NOTE - if your keys are Arrays, your comparators should follow the same pattern e.g. `['name', null]` will get all keys where the first entry in the array is compared to 'name'
+If you've created indexes that are Arrays, have a read of how Arrays and other value are ordered [here](https://github.com/deanlandolt/bytewise#order-of-supported-structures) (flumeview-level uses [charwise](https://github.com/dominictarr/charwise) for ordering, but this is based on [bytewise](https://github.com/deanlandolt/bytewise))
 
-Here are some other options you can pass which get passed to the underlying leveldb:
-https://github.com/Level/levelup#dbcreatereadstreamoptions
+Example of more advanced query:
+
+```js
+{
+  gte: ['@mix', 1524720269458],
+  lte: ['@mix' null],
+}
+```
+
+Assume this is an index where the keys are of the form `[@mentions, timestamp], then this query will get all mentions which are _exactly_ '@mix', and happened more recently than 2018-04-27 5pm NZT (note `null` is the highest value in [bytewise](https://github.com/deanlandolt/bytewise#order-of-supported-structures) comparator)
+
+If you wanted to get all mentions which _started with_ `@m` you could use:
+
+```js
+{
+  gte: ['@m', undefined],
+  lt: ['@m~', null],
+}
+```
+
+Here `undefined` is the lowest value in the comparator, and the `~` is just a slightly unreliable hack to catch values below `@m~` as `~` is quite a high character (e.g. above Z) for lexographic ordering (there are higher characters but english people are less likely to type them, check [ltgt](https://github.com/dominictarr/ltgt) to generate reliable limiting values).
+
+Here's some lexographically ordered strings to help you catch the vibe:
+'@nevernever', '@m', '@manowar', '@ma~', '@mo', '@m~'
 
 
 ## License
