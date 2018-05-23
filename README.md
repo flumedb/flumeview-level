@@ -55,7 +55,9 @@ This last case is useful when you might want multiple entries under a particular
 Extending the key to include some unique aspect (like a timestamp or the `seq` of the value) means you can have multiple indexes in your view which have a _similar_ key.
 
 e.g. [flumeview-search](https://github.com/flumedb/flumeview-search) is a flumeview which takes the text from incoming values and builds an index which can be searched.
-It takes a sentence like "Learn about leveldb" and maps that into index keys like `[['learn', -145], ['about', -145], ['leveldb', -145]]`, meaning we can later search "leveldb" and find this sentence, as well as all other sentences also containing "leveldb".
+It takes a sentence like "Learn about leveldb" and maps that into 3 index keys like `['learn', 'about', 'leveldb']`, each of which will point back to the sentence "Learn about leveldb".
+In practice the 3 indexes need to be more unique if we don't want there to be only one index for `learn` - e.g. `[['learn', 145], ['about', 145], ['leveldb', 145]]` will mean we can later add an index `['learn', 2034]` and it will be distinct from `['learn', 145]`.
+Here 145, 2034 are just unique numbers which keep in index unique - using seq or timestamp is common for this.
 
 
 #### `function`
@@ -87,7 +89,10 @@ e.g.
 }
 ```
 
-If you've created indexes that are Arrays, have a read of how Arrays and other value are ordered [here](https://github.com/deanlandolt/bytewise#order-of-supported-structures) (flumeview-level uses [charwise](https://github.com/dominictarr/charwise) for ordering, but this is based on [bytewise](https://github.com/deanlandolt/bytewise))
+If you've created indexes that are Arrays (quite likely), you need to understand how Arrays and other value are ordered by leveldb.
+This is because using leveldb is all about ordering keys so that you can do queries efficiently.
+Because of the way a log-structured-merge-tree works (what level is) it can read adjacent records quickly (with a single seek) but jumping around is not as fast.
+Read about the pattern of ordering of keys/ indexes flumeview-level uses [here](https://github.com/deanlandolt/bytewise) (actually uses [charwise](https://github.com/dominictarr/charwise) under the hood, but follows the bytewise spec).
 
 Example of more advanced query:
 
@@ -109,7 +114,7 @@ If you wanted to get all mentions which _started with_ `@m` you could use:
 }
 ```
 
-Here `undefined` is the lowest value in the comparator, and the `~` is just a slightly unreliable hack to catch values below `@m~` as `~` is quite a high character (e.g. above Z) for lexographic ordering (there are higher characters but english people are less likely to type them, check [ltgt](https://github.com/dominictarr/ltgt) to generate reliable limiting values).
+Here `undefined` is the lowest value in the comparator, and the `~` is just a slightly unreliable hack to catch values below `@m~` as `~` is quite a high character (e.g. above Z) for lexicographic ordering (there are higher characters but english people are less likely to type them, check [ltgt](https://github.com/dominictarr/ltgt) to generate reliable limiting values).
 
 Here's some lexographically ordered strings to help you catch the vibe:
 '@nevernever', '@m', '@manowar', '@ma~', '@mo', '@m~'
