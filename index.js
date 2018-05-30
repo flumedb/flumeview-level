@@ -10,6 +10,17 @@ var Paramap = require('pull-paramap')
 var ltgt = require('ltgt')
 var explain = require('explain-error')
 var mkdirp = require('mkdirp')
+var LevelDownPlus = require('leveldown-plus')
+var LevelDown = require('leveldown')
+var json = require('flumecodec/json')
+
+function id (e) { return e }
+
+var string_codec = {
+  encode: id,
+  decode: id,
+  buffer: false
+}
 
 module.exports = function (version, map) {
   return function (log, name) {
@@ -25,7 +36,13 @@ module.exports = function (version, map) {
       closed = false
       if(!log.filename)
         throw new Error('flumeview-level can only be used with a log that provides a directory')
-      return Level(path.join(dir, name), {keyEncoding: charwise, valueEncoding: 'json'})
+
+      return LevelDownPlus(
+        LevelDown(path.join(dir, name)), {
+          keyEncoding: charwise,
+          valueEncoding: json
+        }
+      )
     }
 
     function close (cb) {
@@ -41,25 +58,27 @@ module.exports = function (version, map) {
 
     function destroy (cb) {
       close(function () {
-        Level.destroy(dbPath, cb)
+        rmrf(dbPath, cb)
       })
     }
 
     mkdirp(path.join(dir, name), function () {
       if(closed) return
       db = create()
-      db.get(META, {keyEncoding: 'utf8'}, function (err, value) {
-        if(err) since.set(-1)
-        else if(value.version === version)
-          since.set(value.since)
-        else {
-          //version has changed, wipe db and start over.
-          outdated = true
-          destroy(function () {
-            db = create()
-            since.set(-1)
-          })
-        }
+      db.open(function () {
+        db.get(META, {keyEncoding: string_codec}, function (err, value) {
+          if(err) since.set(-1)
+          else if(value.version === version)
+            since.set(value.since)
+          else {
+            //version has changed, wipe db and start over.
+            outdated = true
+            destroy(function () {
+              db = create()
+              since.set(-1)
+            })
+          }
+        })
       })
     })
 
@@ -83,7 +102,8 @@ module.exports = function (version, map) {
             batch = [{
               key: META,
               value: {version: version, since: seq},
-              valueEncoding: 'json', keyEncoding:'utf8', type: 'put'
+              valueEncoding: json,
+              keyEncoding:string_codec, type: 'put'
             }]
 
           //map must return an array (like flatmap) with zero or more values
@@ -115,7 +135,6 @@ module.exports = function (version, map) {
 
         var lower = ltgt.lowerBound(opts)
         if(lower == null) opts.gt = null
-
         function format (key, seq, value) {
           return (
             keys && values && seqs ? {key: key, seq: seq, value: value}
@@ -127,7 +146,7 @@ module.exports = function (version, map) {
         }
 
         return pull(
-          pl.read(db, opts),
+          db.stream(opts),
           pull.filter(function (op) {
             //this is an ugly hack! ); but it stops the index metadata appearing in the live stream
             return op.key !== META
@@ -151,3 +170,7 @@ module.exports = function (version, map) {
     }
   }
 }
+
+
+
+
