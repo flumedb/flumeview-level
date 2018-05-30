@@ -19,7 +19,8 @@
     "pull-paramap": "^1.2.1",
     "pull-stream": "^3.5.0",
     "pull-write": "^1.1.1",
-    "rimraf": "^2.6.2"
+    "rimraf": "^2.6.2",
+    "leveldown-plus": "^1.0.0"
   },
   "devDependencies": {
     "flumecodec": "0.0.1",
