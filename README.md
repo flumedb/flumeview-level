@@ -81,7 +81,7 @@ e.g.
 {
   live: true,     // this is an addition to the classic query options of level
   gte: '@mi',     // gte = greater than or equal to
-  lt: null,       // lt = less than
+  lt: undefined,       // lt = less than
   reverse: true,
   keys: true,
   values: true,
@@ -99,22 +99,22 @@ Example of more advanced query:
 ```js
 {
   gte: ['@mix', 1524720269458],
-  lte: ['@mix' null],
+  lte: ['@mix', undefined],
 }
 ```
 
-Assume this is an index where the keys are of the form `[@mentions, timestamp], then this query will get all mentions which are _exactly_ '@mix', and happened more recently than 2018-04-27 5pm NZT (note `null` is the highest value in [bytewise](https://github.com/deanlandolt/bytewise#order-of-supported-structures) comparator)
+Assume this is an index where the keys are of the form `[@mentions, timestamp], then this query will get all mentions which are _exactly_ '@mix', and happened more recently than 2018-04-27 5pm NZT (note `undefined` is the highest value in [bytewise](https://github.com/deanlandolt/bytewise#order-of-supported-structures) comparator)
 
 If you wanted to get all mentions which _started with_ `@m` you could use:
 
 ```js
 {
-  gte: ['@m', undefined],
-  lt: ['@m~', null],
+  gte: ['@m', null],
+  lt: ['@m~', undefined],
 }
 ```
 
-Here `undefined` is the lowest value in the comparator, and the `~` is just a slightly unreliable hack to catch values below `@m~` as `~` is quite a high character (e.g. above Z) for lexicographic ordering (there are higher characters but english people are less likely to type them, check [ltgt](https://github.com/dominictarr/ltgt) to generate reliable limiting values).
+Here `null` is the lowest value in the comparator, and the `~` is just a slightly unreliable hack to catch values below `@m~` as `~` is quite a high character (e.g. above Z) for lexicographic ordering (there are higher characters but english people are less likely to type them, check [ltgt](https://github.com/dominictarr/ltgt) to generate reliable limiting values).
 
 Here's some lexographically ordered strings to help you catch the vibe:
 '@nevernever', '@m', '@manowar', '@ma~', '@mo', '@m~'
