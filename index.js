@@ -1,34 +1,54 @@
 'use strict'
 var pull = require('pull-stream')
-var Level = require('level')
-var charwise = require('charwise')
 var Write = require('pull-write')
 var pl = require('pull-level')
 var Obv = require('obv')
-var path = require('path')
 var Paramap = require('pull-paramap')
 var ltgt = require('ltgt')
 var explain = require('explain-error')
-var mkdirp = require('mkdirp')
+var charwise = require('charwise')
+const debug = require('debug')('flumeview-level')
+debug.enabled = true
 
 module.exports = function (version, map) {
-  return function (log, name) {
-    var dir = path.dirname(log.filename)
-    var dbPath = path.join(dir, name)
-    var db, writer
+  debug('re-init')
+  return function (log) {
+    debug('re-start')
+    var writer
 
     var META = '\x00', since = Obv()
 
-    var written = 0, closed, outdated
+    var closed, outdated
+
+    let db = log.level({
+      keyEncoding: charwise,
+      valueEncoding: 'json',
+      open: (cb) => {
+        debug('opened')
+        cb()
+      }
+    })
 
     function create() {
+      debug('create()')
+      if (closed === false) {
+        debug('already created')
+      }
+
       closed = false
-      if(!log.filename)
-        throw new Error('flumeview-level can only be used with a log that provides a directory')
-      return Level(path.join(dir, name), {keyEncoding: charwise, valueEncoding: 'json'})
+
+      if (!log.level) {
+        throw new Error('flumeview-level can only be used with a log that provides an instance of level')
+      }
     }
 
     function close (cb) {
+      debug('close()')
+      if (closed === true) {
+        debug('already closed')
+        return cb()
+      }
+
       closed = true
       //todo: move this bit into pull-write
       if (outdated) db.close(cb)
@@ -40,14 +60,15 @@ module.exports = function (version, map) {
     }
 
     function destroy (cb) {
-      close(function () {
-        Level.destroy(dbPath, cb)
-      })
+      db.createKeyStream().pipe(db.createDeleteStream()).on('end', cb)
     }
 
-    mkdirp(path.join(dir, name), function () {
-      if(closed) return
-      db = create()
+    setImmediate(function () {
+      if(closed) {
+        debug('somehow closed')
+        return
+      }
+      create()
       db.get(META, {keyEncoding: 'utf8'}, function (err, value) {
         if(err) since.set(-1)
         else if(value.version === version)
@@ -56,7 +77,6 @@ module.exports = function (version, map) {
           //version has changed, wipe db and start over.
           outdated = true
           destroy(function () {
-            db = create()
             since.set(-1)
           })
         }

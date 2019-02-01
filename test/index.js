@@ -1,11 +1,11 @@
-
 var Flume = require('flumedb')
-var Log = require('flumelog-offset')
+var Log = require('flumelog-level')
 var Index = require('../')
-var codec = require('flumecodec')
+
+const dir = '/tmp/flumelog-level/test' + Math.random()
 
 require('test-flumeview-index')(function (file, seed) {
-  return Flume(Log(file+'/log.offset', 1024, codec.json))
+  return Flume(Log(dir)())
     .use('index', Index(1, function (e) {
       console.log(e)
       return [e.key]
