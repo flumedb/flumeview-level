@@ -76,7 +76,8 @@ module.exports = function (version, map) {
             cb()
           })
         }, function reduce (batch, data) {
-          if(data.sync) return batch
+          if(data.sync || data.key == null) return batch
+
           var seq = data.seq
 
           if(!batch)
