@@ -136,7 +136,19 @@ module.exports = function (version, map) {
           ? Paramap(function (data, cb) {
               if(data.sync) return cb(null, data)
               log.get(data.value, function (err, value) {
-                if(err) cb(explain(err, 'when trying to retrive:'+data.key+'at since:'+log.since.value))
+                if(err) {
+                  if (err.code === 'EDELETED') {
+                    return db.del(data.value, (err) => {
+                      if (err) {
+                        return cb(explain(err, `when trying to delete: ${data.key} at since ${log.since.value}`))
+                      }
+
+                      cb(explain(err, `item ${data.key} has been deleted`))
+                    })
+                  }
+
+                  cb(explain(err, 'when trying to retrive:'+data.key+'at since:'+log.since.value))
+                }
                 else cb(null, format(data.key, data.value, value))
               })
             })
