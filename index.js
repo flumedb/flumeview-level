@@ -138,12 +138,12 @@ module.exports = function (version, map) {
               log.get(data.value, function (err, value) {
                 if(err) {
                   if (err.code === 'EDELETED') {
-                    return db.del(data.value, (err) => {
-                      if (err) {
-                        return cb(explain(err, `when trying to delete: ${data.key} at since ${log.since.value}`))
+                    return db.del(data.value, (delErr) => {
+                      if (delErr) {
+                        return cb(explain(delErr, `when trying to delete: ${data.key} at since ${log.since.value}`))
                       }
 
-                      cb(explain(err, `item ${data.key} has been deleted`))
+                      cb(explain(err, `harmless: item ${data.key} has been deleted`))
                     })
                   }
 
