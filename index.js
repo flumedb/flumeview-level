@@ -133,17 +133,18 @@ module.exports = function (version, map) {
             return op.key !== META
           }),
           values
-          ? Paramap(function (data, cb) {
+          ? pull(
+            Paramap(function (data, cb) {
               if(data.sync) return cb(null, data)
               log.get(data.value, function (err, value) {
                 if(err) {
                   if (err.code === 'EDELETED') {
                     return db.del(data.value, (delErr) => {
                       if (delErr) {
-                        return cb(explain(delErr, `when trying to delete: ${data.key} at since ${log.since.value}`))
+                        return cb(explain(err, 'when trying to delete:'+data.key+'at since:'+log.since.value))
                       }
 
-                      cb(explain(err, `harmless: item ${data.key} has been deleted`))
+                      cb(null,null)
                     })
                   }
 
@@ -151,10 +152,12 @@ module.exports = function (version, map) {
                 }
                 else cb(null, format(data.key, data.value, value))
               })
-            })
+            }),
+            pull.filter(item => item != null)
+          )
           : pull.map(function (data) {
               return format(data.key, data.value, null)
-            })
+          }),
         )
       },
       close: close,
