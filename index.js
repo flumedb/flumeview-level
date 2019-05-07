@@ -139,7 +139,7 @@ module.exports = function (version, map) {
               log.get(data.value, function (err, value) {
                 if(err) {
                   if (err.code === 'EDELETED') {
-                    return db.del(data.value, (delErr) => {
+                    return db.del(data.key, (delErr) => {
                       if (delErr) {
                         return cb(explain(err, 'when trying to delete:'+data.key+'at since:'+log.since.value))
                       }
