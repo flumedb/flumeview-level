@@ -153,7 +153,7 @@ module.exports = function (version, map) {
                 else cb(null, format(data.key, data.value, value))
               })
             }),
-            pull.filter(item => item != null)
+            pull.filter()
           )
           : pull.map(function (data) {
               return format(data.key, data.value, null)
