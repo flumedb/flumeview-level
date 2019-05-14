@@ -138,7 +138,7 @@ module.exports = function (version, map) {
               if(data.sync) return cb(null, data)
               log.get(data.value, function (err, value) {
                 if(err) {
-                  if (err.code === 'EDELETED') {
+                  if (err.code === 'flumelog:deleted') {
                     return db.del(data.key, (delErr) => {
                       if (delErr) {
                         return cb(explain(err, 'when trying to delete:'+data.key+'at since:'+log.since.value))
@@ -157,7 +157,7 @@ module.exports = function (version, map) {
           )
           : pull.map(function (data) {
               return format(data.key, data.value, null)
-          }),
+          })
         )
       },
       close: close,
