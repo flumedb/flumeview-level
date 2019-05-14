@@ -133,16 +133,31 @@ module.exports = function (version, map) {
             return op.key !== META
           }),
           values
-          ? Paramap(function (data, cb) {
+          ? pull(
+            Paramap(function (data, cb) {
               if(data.sync) return cb(null, data)
               log.get(data.value, function (err, value) {
-                if(err) cb(explain(err, 'when trying to retrive:'+data.key+'at since:'+log.since.value))
+                if(err) {
+                  if (err.code === 'flumelog:deleted') {
+                    return db.del(data.key, (delErr) => {
+                      if (delErr) {
+                        return cb(explain(err, 'when trying to delete:'+data.key+'at since:'+log.since.value))
+                      }
+
+                      cb(null,null)
+                    })
+                  }
+
+                  cb(explain(err, 'when trying to retrive:'+data.key+'at since:'+log.since.value))
+                }
                 else cb(null, format(data.key, data.value, value))
               })
-            })
+            }),
+            pull.filter()
+          )
           : pull.map(function (data) {
               return format(data.key, data.value, null)
-            })
+          })
         )
       },
       close: close,
