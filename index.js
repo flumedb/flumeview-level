@@ -98,11 +98,23 @@ module.exports = function (version, map) {
         //wait until the log has been processed up to the current point.
         db.get(key, function (err, seq) {
           if(err && err.name === 'NotFoundError') return cb(err)
-          if(err) cb(explain(err, 'flumeview-level.get: key not found:'+key))
+
+          if (err) {
+            if (err.code === 'flumelog:deleted') {
+              return db.del(key, (delErr) => {
+                if (delErr) {
+                  return cb(explain(err, 'when trying to delete:'+key+'at since:'+log.since.value))
+                }
+
+                cb(null,null)
+              })
+            }
+            return cb(explain(err, 'flumeview-level.get: key not found:'+key))
+          }
           else
             log.get(seq, function (err, value) {
               if(err) cb(explain(err, 'flumeview-level.get: index for:'+key+'pointed at:'+seq+'but log error'))
-              else cb(null, value)
+              else cb(null, value, seq)
             })
         })
       },
@@ -135,7 +147,9 @@ module.exports = function (version, map) {
           values
           ? pull(
             Paramap(function (data, cb) {
-              if(data.sync) return cb(null, data)
+              if (data.sync) return cb(null, data)
+              if (data.type === 'del') return cb(null, null)
+
               log.get(data.value, function (err, value) {
                 if(err) {
                   if (err.code === 'flumelog:deleted') {
