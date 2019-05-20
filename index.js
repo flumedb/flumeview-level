@@ -107,10 +107,10 @@ module.exports = function (version, map) {
               if (err.code === 'flumelog:deleted') {
                 return db.del(key, (delErr) => {
                   if (delErr) {
-                    return cb(explain(err, 'when trying to delete:'+key+'at since:'+log.since.value))
+                    return cb(explain(delErr, 'when trying to delete:'+key+'at since:'+log.since.value))
                   }
 
-                  cb(null, null, seq)
+                  cb(err, null, seq)
                 })
               }
 
