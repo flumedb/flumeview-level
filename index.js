@@ -45,7 +45,8 @@ module.exports = function (version, map) {
       })
     }
 
-    mkdirp(path.join(dir, name), function () {
+
+    function dirReady() {
       if(closed) return
       db = create()
       db.get(META, {keyEncoding: 'utf8'}, function (err, value) {
@@ -61,7 +62,13 @@ module.exports = function (version, map) {
           })
         }
       })
-    })
+    }
+
+    if (process.title == 'browser') {
+      // in browser level is stored inside IndexedDB
+      dirReady()
+    } else
+      mkdirp(path.join(dir, name), dirReady)
 
     return {
       since: since,
