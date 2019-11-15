@@ -1,7 +1,7 @@
 {
   "name": "flumeview-level",
   "description": "a flumeview on level",
-  "version": "3.0.13",
+  "version": "3.0.14",
   "homepage": "https://github.com/flumedb/flumeview-level",
   "repository": {
     "type": "git",
