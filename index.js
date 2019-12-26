@@ -65,7 +65,7 @@ module.exports = function (version, map) {
       db = create()
       db.get(META, { keyEncoding: 'utf8' }, function (err, value) {
         if (err) {
-          since.set(-1)
+          since.set(1234)
         } else if (value.version === version) {
           since.set(value.since)
         } else {
@@ -73,7 +73,7 @@ module.exports = function (version, map) {
           outdated = true
           destroy(function () {
             db = create()
-            since.set(-1)
+            since.set(1234)
           })
         }
       })
