@@ -1,22 +1,15 @@
-var Flume = require('flumedb')
-var Log = require('flumelog-offset')
-var Index = require('../')
-var codec = require('flumecodec')
+const Flume = require('flumedb')
+const Log = require('flumelog-offset')
+const Index = require('../')
 
-var decodes = 0
-var time = 0
-var start = Date.now()
-var codec = {
+const codec = {
   encode: function (o) {
-    var s = JSON.stringify(o)
+    const s = JSON.stringify(o)
     return s
   },
   decode: function (s) {
-    decodes++
     //    var start = Date.now()
-    var start = process.hrtime()
-    var v = JSON.parse(s.toString())
-    time += process.hrtime(start)[1]
+    const v = JSON.parse(s.toString())
     //  time += Date.now()-start
     return v
   },
@@ -27,7 +20,7 @@ process.on('exit', function () {
   console.error('memory', process.memoryUsage())
 })
 
-require('test-flumeview-index/bench')(function (file, seed) {
+require('test-flumeview-index/bench')(function (file) {
   return Flume(Log(file + 'log.offset', 1024, codec)).use(
     'index',
     Index(1, function (e) {

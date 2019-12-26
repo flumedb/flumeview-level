@@ -1,28 +1,27 @@
 'use strict'
-var pull = require('pull-stream')
-var Level = require('level')
-var charwise = require('charwise')
-var Write = require('pull-write')
-var pl = require('pull-level')
-var Obv = require('obv')
-var path = require('path')
-var Paramap = require('pull-paramap')
-var ltgt = require('ltgt')
-var explain = require('explain-error')
-var mkdirp = require('mkdirp')
+const pull = require('pull-stream')
+const Level = require('level')
+const charwise = require('charwise')
+const Write = require('pull-write')
+const pl = require('pull-level')
+const Obv = require('obv')
+const path = require('path')
+const Paramap = require('pull-paramap')
+const ltgt = require('ltgt')
+const explain = require('explain-error')
+const mkdirp = require('mkdirp')
 
 module.exports = function (version, map) {
   return function (log, name) {
-    var dir = path.dirname(log.filename)
-    var dbPath = path.join(dir, name)
-    var db, writer
+    const dir = path.dirname(log.filename)
+    const dbPath = path.join(dir, name)
+    let db, writer
 
-    var META = '\x00'
-    var since = Obv()
+    const META = '\x00'
+    const since = Obv()
 
-    var written = 0
-    var closed
-    var outdated
+    let closed
+    let outdated
 
     function create () {
       closed = false
@@ -40,13 +39,15 @@ module.exports = function (version, map) {
     function close (cb) {
       closed = true
       // todo: move this bit into pull-write
-      if (outdated) db.close(cb)
-      else if (writer) {
+      if (outdated) {
+        db.close(cb)
+      } else if (writer) {
         writer.abort(function () {
           db.close(cb)
         })
-      } else if (!db) cb()
-      else {
+      } else if (!db) {
+        cb()
+      } else {
         since.once(function () {
           db.close(cb)
         })
@@ -63,9 +64,11 @@ module.exports = function (version, map) {
       if (closed) return
       db = create()
       db.get(META, { keyEncoding: 'utf8' }, function (err, value) {
-        if (err) since.set(-1)
-        else if (value.version === version) since.set(value.since)
-        else {
+        if (err) {
+          since.set(-1)
+        } else if (value.version === version) {
+          since.set(value.since)
+        } else {
           // version has changed, wipe db and start over.
           outdated = true
           destroy(function () {
@@ -76,34 +79,42 @@ module.exports = function (version, map) {
       })
     }
 
-    if (process.title == 'browser') {
+    if (process.title === 'browser') {
       // in browser level is stored inside IndexedDB
       dirReady()
-    } else mkdirp(path.join(dir, name), dirReady)
+    } else {
+      mkdirp(path.join(dir, name), dirReady)
+    }
 
     return {
       since: since,
       methods: { get: 'async', read: 'source' },
       createSink: function (cb) {
         return (writer = Write(
-          function (batch, cb) {
-            if (closed) { return cb(new Error('database closed while index was building')) }
+          function (batch, writerCb) {
+            if (closed) {
+              return writerCb(new Error('database closed while index was building'))
+            }
+
             db.batch(batch, function (err) {
-              if (err) return cb(err)
+              if (err) return writerCb(err)
               since.set(batch[0].value.since)
               // callback to anyone waiting for this point.
-              cb()
+              writerCb()
             })
           },
           function reduce (batch, data) {
             if (data.sync) return batch
-            var seq = data.seq
+            const seq = data.seq
 
             if (!batch) {
               batch = [
                 {
                   key: META,
-                  value: { version: version, since: seq },
+                  value: {
+                    version: version,
+                    since: seq
+                  },
                   valueEncoding: 'json',
                   keyEncoding: 'utf8',
                   type: 'put'
@@ -112,13 +123,18 @@ module.exports = function (version, map) {
             }
 
             // map must return an array (like flatmap) with zero or more values
-            var indexed = map(data.value, data.seq)
+            const indexed = map(data.value, data.seq)
             batch = batch.concat(
               indexed.map(function (key) {
-                return { key: key, value: seq, type: 'put' }
+                return {
+                  key: key,
+                  value: seq,
+                  type: 'put'
+                }
               })
             )
             batch[0].value.since = Math.max(batch[0].value.since, seq)
+
             return batch
           },
           512,
@@ -136,9 +152,9 @@ module.exports = function (version, map) {
             )
           }
 
-          log.get(seq, function (err, value) {
-            if (err) {
-              if (err.code === 'flumelog:deleted') {
+          log.get(seq, function (logErr, value) {
+            if (logErr) {
+              if (logErr.code === 'flumelog:deleted') {
                 return db.del(key, delErr => {
                   if (delErr) {
                     return cb(
@@ -152,13 +168,13 @@ module.exports = function (version, map) {
                     )
                   }
 
-                  cb(err, null, seq)
+                  cb(logErr, null, seq)
                 })
               }
 
               return cb(
                 explain(
-                  err,
+                  logErr,
                   'flumeview-level.get: index for: ' +
                     key +
                     'pointed at:' +
@@ -173,14 +189,14 @@ module.exports = function (version, map) {
         })
       },
       read: function (opts) {
-        var keys = opts.keys !== false
-        var values = opts.values !== false
-        var seqs = opts.seqs !== false
+        const keys = opts.keys !== false
+        const values = opts.values !== false
+        const seqs = opts.seqs !== false
         opts.keys = true
         opts.values = true
         // TODO: preserve whatever the user passed in on opts...
 
-        var lower = ltgt.lowerBound(opts)
+        const lower = ltgt.lowerBound(opts)
         if (lower == null) opts.gt = null
 
         function format (key, seq, value) {
@@ -240,7 +256,9 @@ module.exports = function (version, map) {
                             log.since.value
                       )
                     )
-                  } else cb(null, format(data.key, data.value, value))
+                  } else {
+                    cb(null, format(data.key, data.value, value))
+                  }
                 })
               }),
               pull.filter()
