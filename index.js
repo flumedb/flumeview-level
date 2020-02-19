@@ -68,7 +68,7 @@ module.exports = function (version, map) {
       // in browser level is stored inside IndexedDB
       dirReady()
     } else
-      mkdirp(path.join(dir, name), dirReady)
+      mkdirp(path.join(dir, name)).then(dirReady)
 
     return {
       since: since,
