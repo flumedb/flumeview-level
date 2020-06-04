@@ -18,7 +18,7 @@ const name = 'foo'
 
 flumedb.use(
   name,
-  FlumeviewLevel(1, function map(value) {
+  FlumeviewLevel(1, function map (value) {
     return [value.foo] // must return an array
   })
 )
@@ -33,7 +33,10 @@ flumedb.append({ foo: 'bar' }, function (err) {
   })
 
   // Or query ranges via pull-streams
-  pull(flumedb[name].read({ gte: 'bar', live: true }), pull.drain(console.log))
+  pull(
+    flumedb[name].read({ gte: 'bar', live: true }),
+    pull.drain(console.log)
+  )
 })
 ```
 
