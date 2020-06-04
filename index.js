@@ -9,19 +9,18 @@ var path = require('path')
 var Paramap = require('pull-paramap')
 var ltgt = require('ltgt')
 var explain = require('explain-error')
-var mkdirp = require('mkdirp')
+
+const noop = () => {};
 
 module.exports = function (version, map) {
   return function (log, name) {
     var dir = path.dirname(log.filename)
-    var dbPath = path.join(dir, name)
     var db, writer
 
     var META = '\x00'
     var since = Obv()
 
-    var closed
-    var outdated
+    var closed, outdated
 
     function create () {
       closed = false
@@ -37,48 +36,63 @@ module.exports = function (version, map) {
     }
 
     function close (cb) {
+      if (typeof cb !== 'function') {
+        cb = noop
+      }
+
       closed = true
       // todo: move this bit into pull-write
-      if (outdated) db.close(cb)
-      else if (writer) {
+      if (outdated) {
+        db.close(cb)
+      } else if (writer) {
         writer.abort(function () {
-          db.close(cb)
+          db.close((err) => {
+            cb(err)
+          })
         })
-      } else if (!db) cb()
-      else {
+      } else if (!db) {
+        cb()
+      } else {
         since.once(function () {
           db.close(cb)
         })
       }
     }
+    if (typeof process === 'object') {
+      // Ensure that we always close the database before the process exists.
+      process.on('beforeExit', close)
+    }
 
     function destroy (cb) {
-      close(function () {
-        Level.destroy(dbPath, cb)
-      })
+      // FlumeDB restarts the stream as soon as the stream is cancelled, so the
+      // rebuild happens before `writer.abort()` calls back. This means that we
+      // must run `since.set(-1)` before aborting the stream.
+      since.set(-1)
+
+      // The `writer` object is `undefined` on startup, so we need to ensure
+      // that the writer actually exists before attempting to abort it.
+      if (writer) {
+        writer.abort(() => {
+          db.clear(cb)
+        })
+      } else {
+        db.clear(db)
+      }
     }
 
-    function dirReady () {
-      if (closed) return
-      db = create()
-      db.get(META, { keyEncoding: 'utf8' }, function (err, value) {
-        if (err) since.set(-1)
-        else if (value.version === version) since.set(value.since)
-        else {
-          // version has changed, wipe db and start over.
-          outdated = true
-          destroy(function () {
-            db = create()
-            since.set(-1)
-          })
-        }
-      })
-    }
+    if (closed) return
 
-    if (process.title === 'browser') {
-      // in browser level is stored inside IndexedDB
-      dirReady()
-    } else mkdirp(path.join(dir, name)).then(dirReady)
+    db = create()
+
+    db.get(META, { keyEncoding: 'utf8' }, function (err, value) {
+      if (err) since.set(-1)
+      else if (value.version === version) since.set(value.since)
+      else {
+        // version has changed, wipe db and start over.
+        outdated = true
+        destroy()
+      }
+    })
 
     return {
       since: since,
@@ -251,8 +265,8 @@ module.exports = function (version, map) {
             })
         )
       },
-      close: close,
-      destroy: destroy
+      close,
+      destroy
       // put, del, batch - leave these out for now, since the indexes just map.
     }
   }
