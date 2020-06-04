@@ -4,31 +4,39 @@ A flumeview implemented on top of level.
 
 Provides indexes which are persistent and can be streamed in order.
 
-
 ## example
 
-``` js
-var FlumeviewLevel = require('flumeview-level')
+```js
+const Flume = require('flumedb')
+const FlumelogOffset = require('flumelog-offset')
+const FlumeviewLevel = require('flumeview-level')
+const pull = require('pull-stream')
 
-flumedb.use(name, FlumeviewLevel(1, function map (value) {
-  return [data.foo] // must return an array
-}))
+const flumedb = Flume(FlumelogOffset('/tmp/log.offset'))
 
-flumedb.append({foo: 'bar'}, function (err) {
-  if(err) throw err
+const name = 'foo'
 
-  //query items from the index directly
+flumedb.use(
+  name,
+  FlumeviewLevel(1, function map (value) {
+    return [value.foo] // must return an array
+  })
+)
+
+flumedb.append({ foo: 'bar' }, function (err) {
+  if (err) throw err
+
+  // Query items from the index directly
   flumedb[name].get('bar', function (err, value) {
-    if(err) throw err
-    console.log(value) // => {foo: 'bar'})
+    if (err) throw err
+    console.log(value) // => { foo: 'bar' }
   })
 
-  //or query ranges via pull-streams
+  // Or query ranges via pull-streams
   pull(
-    flumedb[name].read({gte: 'bar', live: true}),
-    ...
+    flumedb[name].read({ gte: 'bar', live: true }),
+    pull.drain(console.log)
   )
-
 })
 ```
 
@@ -37,15 +45,18 @@ flumedb.append({foo: 'bar'}, function (err) {
 ### `FlumeviewLevel(version, map) => function`
 
 #### `version`
+
 The version of the view. Incrementing this number will cause the view to be re-built
 
 #### `map`
+
 A function with signature `(value, seq)`, where `value` is the item from the log coming past, and `seq` is the location of that value in the flume log.
 
 This function **must return an Array** that's either empty or contains unique index key(s).
 These index keys can then be queired to retrieve the stored value (see `get` and `read` below).
 
 Examples of index key(s) you might return:
+
 - `[]` - i.e. don't add any indexes for this `value`
 - `['@mix']` - make an index entry for this value under string `@mix`
 - `['@mix', '@mixmix']` - make an index entries for this value under both `@mix` AND `@mixmix`
@@ -59,17 +70,15 @@ It takes a sentence like "Learn about leveldb" and maps that into 3 index keys l
 In practice the 3 indexes need to be more unique if we don't want there to be only one index for `learn` - e.g. `[['learn', 145], ['about', 145], ['leveldb', 145]]` will mean we can later add an index `['learn', 2034]` and it will be distinct from `['learn', 145]`.
 Here 145, 2034 are just unique numbers which keep in index unique - using seq or timestamp is common for this.
 
-
 #### `function`
-flumeview-level returns a function which follows the flumeview pattern, enabling it to be installed into a flumedb.
 
+flumeview-level returns a function which follows the flumeview pattern, enabling it to be installed into a flumedb.
 
 ### `get(key, cb)`
 
 This is a method that gets attached to the flumedb after you install your flumeview (see example above).
 
 The keys for the values in `map` above would be `'@mix'`, `'@mixmix'`, or `['@mix', 1524805117433]`
-
 
 ### `read(opts) => pull-stream`
 
@@ -103,7 +112,7 @@ Example of more advanced query:
 }
 ```
 
-Assume this is an index where the keys are of the form `[@mentions, timestamp], then this query will get all mentions which are _exactly_ '@mix', and happened more recently than 2018-04-27 5pm NZT (note `undefined` is the highest value in [bytewise](https://github.com/deanlandolt/bytewise#order-of-supported-structures) comparator)
+Assume this is an index where the keys are of the form `[@mentions, timestamp], then this query will get all mentions which are _exactly_ '@mix', and happened more recently than 2018-04-27 5pm NZT (note`undefined` is the highest value in [bytewise](https://github.com/deanlandolt/bytewise#order-of-supported-structures) comparator)
 
 If you wanted to get all mentions which _started with_ `@m` you could use:
 
@@ -119,9 +128,6 @@ Here `null` is the lowest value in the comparator, and the `~` is just a slightl
 Here's some lexographically ordered strings to help you catch the vibe:
 '@nevernever', '@m', '@manowar', '@ma~', '@mo', '@m~'
 
-
 ## License
 
 MIT
-
-
