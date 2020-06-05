@@ -76,7 +76,7 @@ module.exports = function (version, map) {
           db.clear(cb)
         })
       } else {
-        db.clear(db)
+        db.clear(cb)
       }
     }
 
