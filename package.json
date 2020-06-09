@@ -28,7 +28,7 @@
   },
   "scripts": {
     "// Warning": "The 'test' script below is haunted. Edit with caution",
-    "test": "node test/index.js && node test/live.js && node test/bench.js"
+    "test": "tape 'test/{index,live,bench}.js'"
   },
   "author": "'Dominic Tarr' <dominic.tarr@gmail.com> (dominictarr.com)",
   "license": "MIT"
