@@ -69,15 +69,23 @@ module.exports = function (version, map) {
       // must run `since.set(-1)` before aborting the stream.
       since.set(-1)
 
-      // The `writer` object is `undefined` on startup, so we need to ensure
-      // that the writer actually exists before attempting to abort it.
-      if (writer) {
-        writer.abort(() => {
-          db.clear(cb)
-        })
-      } else {
-        db.clear(cb)
-      }
+      // The `clear()` method must run before the stream is closed, otherwise
+      // you can have a situation where you:
+      //
+      // 1. Flumeview-Level closes the stream
+      // 2. FlumeDB restarts the stream
+      // 3. Flumeview-Level processes a message
+      // 4. Flumeview-Level runs `db.clear()` and deletes that message.
+      //
+      db.clear((err) => {
+        // The `writer` object is `undefined` on startup, so we need to ensure
+        // that the writer actually exists before attempting to abort it.
+        if (err == null && writer) {
+          writer.abort(cb)
+        } else {
+          cb(err)
+        }
+      })
     }
 
     if (closed) return
