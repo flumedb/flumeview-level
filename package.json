@@ -24,7 +24,7 @@
     "flumedb": "^2.1.4",
     "flumelog-offset": "^3.4.4",
     "tape": "^4.13.3",
-    "test-flumeview-index": "^2.2.5"
+    "test-flumeview-index": "^2.3.1"
   },
   "scripts": {
     "// Warning": "The 'test' script below is haunted. Edit with caution",
