@@ -23,7 +23,7 @@
     "flumecodec": "0.0.1",
     "flumedb": "^2.1.4",
     "flumelog-offset": "^3.4.4",
-    "tape": "^4.13.3",
+    "tape": "^5.0.0",
     "test-flumeview-index": "^2.3.1"
   },
   "scripts": {
