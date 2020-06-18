@@ -4,7 +4,7 @@ var Level = require('level')
 var charwise = require('charwise')
 var Write = require('pull-write')
 var pl = require('pull-level')
-var Obv = require('obv')
+var Obv = require('obz')
 var path = require('path')
 var Paramap = require('pull-paramap')
 var ltgt = require('ltgt')
@@ -58,10 +58,6 @@ module.exports = function (version, map) {
         })
       }
     }
-    if (typeof process === 'object') {
-      // Ensure that we always close the database before the process exists.
-      process.on('beforeExit', close)
-    }
 
     function destroy (cb) {
       // FlumeDB restarts the stream as soon as the stream is cancelled, so the
@@ -76,16 +72,7 @@ module.exports = function (version, map) {
       // 2. FlumeDB restarts the stream
       // 3. Flumeview-Level processes a message
       // 4. Flumeview-Level runs `db.clear()` and deletes that message.
-      //
-      db.clear((err) => {
-        // The `writer` object is `undefined` on startup, so we need to ensure
-        // that the writer actually exists before attempting to abort it.
-        if (err == null && writer) {
-          writer.abort(cb)
-        } else {
-          cb(err)
-        }
-      })
+      db.clear(cb)
     }
 
     if (closed) return
